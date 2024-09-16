@@ -1,4 +1,5 @@
-function getRSSFeed(RSSURL:string) {
+
+function getRSSFeed(RSSContent:string) {
     return null;
 }
 
@@ -9,3 +10,5 @@ function validateRSSFeed(RSSFedd:XMLDocument) {
 function getArticlesFromRSSFeed(RSSFedd:XMLDocument) {
     return null;
 }
+
+export {getRSSFeed, validateRSSFeed, getArticlesFromRSSFeed}

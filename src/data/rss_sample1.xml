@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>FAKE TITLE</title>
+        <description>sample-fake sample-fake sample-fake</description>
+        <link>https://www.france24.com/fr/</link>
+        <lastBuildDate>Mon, 16 Sep 2024 13:06:15 GMT</lastBuildDate>
+        <item>
+            <category>Fake</category>
+            <title>Fake title</title>
+            <link>https://www.sample-fake.com</link>
+            <description>
+                Lorem ipsum dolor sit amet, consectetur adipisicing elit. Corrupti, vero.
+            </description>
+            <guid isPermaLink="false">4e6b9c7a</guid>
+            <pubDate>Mon, 16 Sep 2024 06:28:30 GMT</pubDate>
+        </item>
+        <language>fr</language>
+    </channel>
+</rss>
