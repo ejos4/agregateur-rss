@@ -1,9 +1,9 @@
-class Leaf<V> {
+class Tree<V> {
   // @ts-ignore
   private #node: V | null;
-  private children: Leaf<V>[] | null;
+  private children: Tree<V>[] | null;
 
-  constructor(nodeValue: V | null = null, children: Leaf<V>[] | null = null) {
+  constructor(nodeValue: V | null = null, children: Tree<V>[] | null = null) {
     this.#node = nodeValue;
     this.children = children;
   }
@@ -20,28 +20,28 @@ class Leaf<V> {
 
   // -------- Childs getter --------
 
-  getChildren(): Leaf<V>[] | null {
+  getChildren(): Tree<V>[] | null {
     return this.children;
   }
 
-  getChild(index: number): Leaf<V> | null {
+  getChild(index: number): Tree<V> | null {
     if (this.children === null) return null;
     if (index >= 0 && index < this.children.length) return this.children[index];
     return null;
   }
 
-  getFirstChild(): Leaf<V> | null {
+  getFirstChild(): Tree<V> | null {
     return this.getChild(0);
   }
 
-  getLastChild(): Leaf<V> | null {
+  getLastChild(): Tree<V> | null {
     if (this.children === null) return null;
     return this.getChild(this.children.length - 1);
   }
 
   // -------- Childs setter --------
 
-  setChildren(newValue: Leaf<V>[]): void {
+  setChildren(newValue: Tree<V>[]): void {
     this.children = newValue;
   }
 
@@ -83,32 +83,32 @@ class Leaf<V> {
 
   // -------- Childs insert --------
 
-  insertChildAt(index: number, newLeaf: Leaf<V>): void {
+  insertChildAt(index: number, newTree: Tree<V>): void {
     if (this.children === null) {
-      this.children = [newLeaf];
+      this.children = [newTree];
       return;
     }
     if (index <= 0) {
-      this.children = [newLeaf, ...this.children];
+      this.children = [newTree, ...this.children];
       return;
     } else if (index >= this.children.length) {
-      this.children = [...this.children, newLeaf];
+      this.children = [...this.children, newTree];
       return;
     } else {
       this.children = [
         ...this.children.slice(0, index),
-        newLeaf,
+        newTree,
         ...this.children.slice(index),
       ];
     }
   }
 
-  insertChildFirst(newLeaf: Leaf<V>): void {
-    this.insertChildAt(0, newLeaf);
+  insertChildFirst(newTree: Tree<V>): void {
+    this.insertChildAt(0, newTree);
   }
 
-  insertChildLast(newLeaf: Leaf<V>): void {
-    this.insertChildAt(this.children?.length || 1, newLeaf);
+  insertChildLast(newTree: Tree<V>): void {
+    this.insertChildAt(this.children?.length || 1, newTree);
   }
 
   // -------- Childs delete --------
@@ -140,6 +140,90 @@ class Leaf<V> {
     }
     this.deleteChild(this.children.length - 1);
   }
+
+  getMaxDepth(acc=1):number{
+    const children = this.getChildren();
+
+    if(children === null) return acc;
+    else {
+      let maxDepth = 0;
+
+      for (let i=0; i < children.length; i++) {
+        const currentDepth = children[i].getMaxDepth(acc + 1);
+        if (maxDepth < currentDepth)
+          maxDepth = currentDepth
+      }
+
+      return maxDepth;
+    }
+  }
+
+  display() {
+    console.log(this.getValue())
+    const children = this.getChildren()
+    if ( children === null) return;
+
+    let temp = children.map(child => [1, child]);
+    while (temp.length !== 0) {
+      type data = [number, Tree<V>]
+      // @ts-ignore
+      let [depth, child]:data = temp.shift();
+      let childValue = child.getValue();
+      let lineToPrint = "";
+      const subChildren = child.getChildren();
+      let childValueString = (childValue === null) ? "#" : childValue;
+
+      // @ts-ignore
+      if (depth !== 1 && temp.filter(([tDepth, _]) => tDepth<2).length)
+        lineToPrint += "|";
+      
+      for (let i=0; i < depth; i++) {
+        if (i === depth-1)
+          lineToPrint += "+---";
+        else
+          lineToPrint += "    ";
+      }
+      lineToPrint += " "
+      lineToPrint += childValueString;
+
+      if (subChildren !== null) {
+        for (let i = subChildren.length - 1; i >= 0; i--) {
+          temp.unshift([depth+1, subChildren[i]])
+        }
+      }
+
+      console.log(lineToPrint);
+    }
+
+  }
 }
 
-export { Leaf };
+export { Tree };
+
+// let tree1 = new Tree(2, [
+//   new Tree(1),
+//   new Tree(3)
+// ])
+
+// let tree2 = new Tree<string|number>('7', [
+//   new Tree(2, [
+//     new Tree(null, [
+//       new Tree(3),
+//       new Tree<string|number>("A", [
+//         new Tree(0, [
+//           new Tree(9)
+//         ])
+//       ])
+//     ]),
+//     new Tree(6, [
+//       new Tree(4, [new Tree(5)]),
+//     ])
+//   ]),
+//   new Tree(10, [new Tree(9)])
+// ])
+
+// console.log(tree2.getMaxDepth())
+// console.log("\nDisplaying tree 1:");
+// tree1.display()
+// console.log("\nDisplaying tree 2:");
+// tree2.display()
