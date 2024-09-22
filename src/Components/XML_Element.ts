@@ -1,23 +1,25 @@
 import { Tree } from "./Tree/Tree";
 
-interface XML_Attributes {
+interface dictionnary {
   [key: string]: string;
 }
+interface XML_Attributes extends dictionnary {}
+interface Namespaces extends dictionnary {}
 
 class XML_Element extends Tree<string> {
   parent: XML_Element | null = null;
   name: string;
+  prefix: string | null = null;
   // @ts-ignore
   private #attributes: XML_Attributes = {};
-  namespacePrefix: string | null = null;
-  namespaceURL: string | null = null;
+  namespaces: Namespaces = {}; // Store the namespaces given by attributes.
+  defaultNamespaceURL: string | null = null; // Store the defined default namespace given by attribute.
+  activeNamespaceURL: string | null = null; // Store the namespace for the element if prefix given.
   // @ts-ignore
-  private #isDefaultNamespace: boolean = false;
-  // publicIsDefaultNamespace: boolean = false;
+  private #containDefaultNamespace: boolean = false;
   // @ts-ignore
   private #id = -1;
-  // publicId = this.#id;
-  text = "";
+  text = ""; // Store the text content of the element.
 
   constructor(
     tagName: string,
@@ -26,7 +28,13 @@ class XML_Element extends Tree<string> {
     text: string | null = null
   ) {
     super(tagName);
-    this.name = tagName;
+    let [prefix, name] = tagName.split(":");
+    if (name !== undefined) {
+      this.prefix = prefix;
+      this.name = name;
+    } else {
+      this.name = prefix;
+    }
     if (children !== null) this.setChildren(children);
 
     if (attributes !== null) {
@@ -37,71 +45,83 @@ class XML_Element extends Tree<string> {
 
     if (text !== null) this.text = text;
 
-    this.init();
-  }
-
-  init() {
-    // Seperate the namespace prefix from the element tag name and define default namesapce
-    let attributesKey = Object.keys(this.#attributes);
-
-    // Initializing the namespace
-    const namespaceKey = attributesKey.find((key) => key.includes("xmlns"));
-    if (namespaceKey !== undefined) {
-      // Setting namespace prefix if prefix is given with attribute key/value pair
-      const [_, namespacePrefix] = namespaceKey.split(":");
-      // @ts-ignore
-      const namespaceURL = this.#attributes[namespaceKey];
-
-      if (namespaceURL !== undefined && namespaceURL !== "") {
-        this.namespaceURL = namespaceURL;
-      }
-
-      if (namespacePrefix === undefined) this.#isDefaultNamespace = true;
-      else this.namespacePrefix = namespacePrefix;
-    } else if (this.name.includes(":")) {
-      // Setting namespace prefix if prefix is given with tag name
-      const [namespacePrefix, realName] = this.name.split(":");
-      this.namespacePrefix = namespacePrefix;
-      this.name = realName;
-      // Should lookup to see if parent has a given namespaceURL for that prefix or not
-    } else if (false) {
-      // Lookup to see if parent has a default namespace
-      // Not implemented
-    }
-  }
-
-  getIsDefaultNamespace(): boolean {
-    return this.#isDefaultNamespace;
+    this.initNamespace();
   }
 
   isEmpty(): boolean {
     if (this.getChildren() === null && this.text === "") return true;
     return false;
   }
-
-  update() {
-    // Populate the namespace
-    if (this.namespaceURL === null || this.namespaceURL === "") {
-      let currentParent = this.parent;
-
-      while (
-        currentParent !== null &&
-        ((currentParent.namespacePrefix !== null &&
-          currentParent.namespacePrefix !== this.namespacePrefix) ||
-          (currentParent.#isDefaultNamespace &&
-            currentParent.namespacePrefix !== this.namespacePrefix))
-      ) {
-        currentParent = currentParent.parent;
-      }
-
-      if (currentParent !== null)
-        this.namespaceURL = currentParent.namespaceURL;
-    }
-  }
-
+  
   setValue(newValue: string): void {
     super.setValue(newValue);
     this.name = newValue;
+  }
+
+  // -------------- Managing namespaces --------------
+  
+  // Return the corresponding namespaceURL for a given namespacePrefix
+  getNamespaceURL(namespacePrefix: string): string | null {
+    for (let [currentNamespacePrefix, currentNamespaceURL] of Object.entries(
+      this.namespaces
+    )) {
+      if (namespacePrefix === currentNamespacePrefix)
+        return currentNamespaceURL;
+    }
+    return null;
+  }
+
+  // Store the namespaces given by attributes and define default namespace if they are present
+  initNamespace() {
+    let attributesKey = Object.entries(this.#attributes);
+    const namespaces = attributesKey.filter(([key, _]) =>
+      key.includes("xmlns")
+    );
+
+    if (namespaces.length !== 0) {
+      for (let [namespaceKey, namespaceURL] of namespaces) {
+        let [_, namespacePrefix] = namespaceKey.split(":");
+
+        // If the namespaceKey is "xmlns" namespacePrefix should be undefined and it's the default namespace
+        if (namespacePrefix === undefined) {
+          this.#containDefaultNamespace = true;
+          this.defaultNamespaceURL = namespaceURL;
+        } else {
+          Object.assign(this.namespaces, {
+            [`${namespacePrefix}`]: namespaceURL,
+          });
+        }
+      }
+    }
+  }
+
+  updateNamespace() {
+    // Populate the namespace
+    if (this.activeNamespaceURL === null || this.activeNamespaceURL === "") {
+      let currentParent = this.parent;
+      let currentPrefix = this.prefix;
+
+      while (currentParent !== null) {
+        let relatedParentNamespaceURL: string | null = null;
+
+        if (currentPrefix !== null) {
+          relatedParentNamespaceURL =
+            currentParent.getNamespaceURL(currentPrefix);
+          if (relatedParentNamespaceURL !== null) {
+            this.activeNamespaceURL = relatedParentNamespaceURL;
+            return;
+          }
+        } else if (
+          currentParent.#containDefaultNamespace &&
+          currentPrefix === null
+        ) {
+          this.activeNamespaceURL = currentParent.defaultNamespaceURL;
+          return;
+        }
+
+        currentParent = currentParent.parent;
+      }
+    }
   }
 
   // -------------- Get & Set attributes --------------
@@ -120,7 +140,7 @@ class XML_Element extends Tree<string> {
     this.#attributes[attributeName] = newAttributeValue;
   }
 
-  // -------------- Managing id --------------
+  // -------------- Get & Set id --------------
 
   setId(newId: number) {
     this.#id = newId;
@@ -132,48 +152,54 @@ class XML_Element extends Tree<string> {
 
   // -------------- Insert element --------------
 
+  insertChildAt(index: number, xmlChild: XML_Element): void {
+    super.insertChildAt(index, xmlChild);
+    xmlChild.parent = this;
+    xmlChild.updateNamespace()
+  }
+
   insertChildFirst(xmlChild: XML_Element) {
     super.insertChildFirst(xmlChild);
     xmlChild.parent = this;
-    xmlChild.update();
+    xmlChild.updateNamespace();
   }
 
   insertChildLast(xmlChild: XML_Element): void {
     super.insertChildLast(xmlChild);
     xmlChild.parent = this;
-    xmlChild.update();
+    xmlChild.updateNamespace();
   }
 }
 
-// let xml1 = new XML_Element("table", [
-//   ["path", "djelsokfre"],
-//   ["aria-checked", "true"],
-//   ["xmlns:f", "http://www.w3.org/TR/html4/"],
-// ]);
-// let xml2 = new XML_Element(
-//   "f:name",
-//   [
-//     ["path", "djelsokfre"],
-//     ["aria-checked", "true"],
-//   ],
-//   null,
-//   "African Coffee Table"
-// );
-// let xml3 = new XML_Element(
-//   "f:width",
-//   [
-//     ["path", "djelsokfre"],
-//     ["aria-checked", "true"],
-//   ],
-//   null,
-//   "80"
-// );
+let xml1 = new XML_Element("table", [
+  ["path", "djelsokfre"],
+  ["aria-checked", "true"],
+  ["xmlns:f", "http://www.w3.org/TR/html4/"],
+]);
+let xml2 = new XML_Element(
+  "f:name",
+  [
+    ["path", "djelsokfre"],
+    ["aria-checked", "true"],
+  ],
+  null,
+  "African Coffee Table"
+);
+let xml3 = new XML_Element(
+  "f:width",
+  [
+    ["path", "djelsokfre"],
+    ["aria-checked", "true"],
+  ],
+  null,
+  "80"
+);
 
-// xml1.insertChildFirst(xml2);
+xml1.insertChildFirst(xml2);
+xml1.insertChildLast(xml3);
 // xml1.insertChildLast(xml3);
-// // xml1.insertChildLast(xml3);
 
-// console.dir(xml1);
+console.dir(xml1);
 // // console.log(xml2?.parent?.name)
 
 export { XML_Element };
