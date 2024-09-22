@@ -1,11 +1,11 @@
-import fs from "node:fs"
-import path from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve} from "node:path";
 
-const resolvePath = (relativePath:string) => path.resolve(__dirname, relativePath)
+const resolvePath = (relativePath:string) => resolve(__dirname, relativePath)
 
 function loadFile(filePath:string) {
     try {
-        const data = fs.readFileSync(filePath, 'utf8');
+        const data = readFileSync(filePath, 'utf8');
         return data
     } catch (err) {
         console.error(err);

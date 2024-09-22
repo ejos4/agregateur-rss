@@ -1,10 +1,10 @@
 import { Tree } from "./Tree/Tree";
 
-interface dictionnary {
+interface Dictionnary {
   [key: string]: string;
 }
-interface XML_Attributes extends dictionnary {}
-interface Namespaces extends dictionnary {}
+interface XML_Attributes extends Dictionnary {}
+interface Namespaces extends Dictionnary {}
 
 class XML_Element extends Tree<string> {
   parent: XML_Element | null = null;
@@ -170,36 +170,5 @@ class XML_Element extends Tree<string> {
     xmlChild.updateNamespace();
   }
 }
-
-let xml1 = new XML_Element("table", [
-  ["path", "djelsokfre"],
-  ["aria-checked", "true"],
-  ["xmlns:f", "http://www.w3.org/TR/html4/"],
-]);
-let xml2 = new XML_Element(
-  "f:name",
-  [
-    ["path", "djelsokfre"],
-    ["aria-checked", "true"],
-  ],
-  null,
-  "African Coffee Table"
-);
-let xml3 = new XML_Element(
-  "f:width",
-  [
-    ["path", "djelsokfre"],
-    ["aria-checked", "true"],
-  ],
-  null,
-  "80"
-);
-
-xml1.insertChildFirst(xml2);
-xml1.insertChildLast(xml3);
-// xml1.insertChildLast(xml3);
-
-console.dir(xml1);
-// // console.log(xml2?.parent?.name)
 
 export { XML_Element };
