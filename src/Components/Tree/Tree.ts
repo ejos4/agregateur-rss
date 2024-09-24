@@ -1,11 +1,13 @@
 class Tree<V> {
   // @ts-ignore
   private #node: V | null;
+  parent: Tree<V> | null;
   private children: Tree<V>[] | null;
 
   constructor(nodeValue: V | null = null, children: Tree<V>[] | null = null) {
     this.#node = nodeValue;
     this.children = children;
+    this.parent = null;
   }
 
   // -------- Value methods --------
@@ -16,6 +18,10 @@ class Tree<V> {
 
   setValue(newValue: V): void {
     this.#node = newValue;
+  }
+
+  getValueString():string {
+    return JSON.stringify(this.#node)
   }
 
   // -------- Childs getter --------
@@ -84,6 +90,8 @@ class Tree<V> {
   // -------- Childs insert --------
 
   insertChildAt(index: number, newTree: Tree<V>): void {
+    newTree.parent = this;
+    newTree.parent = this;
     if (this.children === null) {
       this.children = [newTree];
       return;
@@ -104,10 +112,12 @@ class Tree<V> {
   }
 
   insertChildFirst(newTree: Tree<V>): void {
+    newTree.parent = this;
     this.insertChildAt(0, newTree);
   }
 
   insertChildLast(newTree: Tree<V>): void {
+    newTree.parent = this;
     this.insertChildAt(this.children?.length || 1, newTree);
   }
 
@@ -159,7 +169,7 @@ class Tree<V> {
   }
 
   display() {
-    console.log(this.getValue())
+    console.log(this.getValueString())
     const children = this.getChildren()
     if ( children === null) return;
 
@@ -171,7 +181,7 @@ class Tree<V> {
       let childValue = child.getValue();
       let lineToPrint = "";
       const subChildren = child.getChildren();
-      let childValueString = (childValue === null) ? "#" : JSON.stringify(childValue);
+      let childValueString = (childValue === null) ? "#" : this.getValueString();
 
       // @ts-ignore
       if (depth !== 1 && temp.filter(([tDepth, _]) => tDepth<2).length)

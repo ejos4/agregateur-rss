@@ -48,6 +48,15 @@ class XML_Element extends Tree<string> {
     this.initNamespace();
   }
 
+  getValueString(): string {
+    return `<${this.prefix?`${this.prefix}:`:""}${this.name} ${JSON.stringify(this.#attributes)} ${this.text.length===0?"/>":`>${this.text}</${this.prefix?`${this.prefix}:`:""}${this.name}>`}`
+    return JSON.stringify({
+      tag: `${this.prefix?`${this.prefix}:`:""}${this.name}`,
+      attributes: this.#attributes,
+      content: this.text
+    })
+  }
+
   isEmpty(): boolean {
     if (this.getChildren() === null && this.text === "") return true;
     return false;
@@ -140,6 +149,10 @@ class XML_Element extends Tree<string> {
     this.#attributes[attributeName] = newAttributeValue;
   }
 
+  addAttribute(attributeName: string, newAttributeValue: string) {
+    Object.assign(this.#attributes, {[`${attributeName}`]: newAttributeValue});
+  }
+
   // -------------- Get & Set id --------------
 
   setId(newId: number) {
@@ -154,20 +167,59 @@ class XML_Element extends Tree<string> {
 
   insertChildAt(index: number, xmlChild: XML_Element): void {
     super.insertChildAt(index, xmlChild);
-    xmlChild.parent = this;
+    // xmlChild.parent = this;
     xmlChild.updateNamespace()
   }
 
   insertChildFirst(xmlChild: XML_Element) {
     super.insertChildFirst(xmlChild);
-    xmlChild.parent = this;
+    // xmlChild.parent = this;
     xmlChild.updateNamespace();
   }
 
   insertChildLast(xmlChild: XML_Element): void {
     super.insertChildLast(xmlChild);
-    xmlChild.parent = this;
+    // xmlChild.parent = this;
     xmlChild.updateNamespace();
+  }
+
+  
+  display() {
+    console.log(this.getValueString())
+    const children = this.getChildren() as (XML_Element[]|null)
+    if ( children === null) return;
+
+    let temp = children.map(child => [1, child]);
+    while (temp.length !== 0) {
+      type data = [number, XML_Element]
+      // @ts-ignore
+      let [depth, child]:data = temp.shift();
+      let lineToPrint = "";
+      const subChildren = child.getChildren() as (XML_Element[]|null);
+      let childValueString = child.getValueString();
+
+      // @ts-ignore
+      if (depth !== 1 && temp.filter(([tDepth, _]) => tDepth<2).length)
+        lineToPrint += "|";
+      
+      for (let i=0; i < depth; i++) {
+        if (i === depth-1)
+          lineToPrint += "+---";
+        else
+          lineToPrint += "    ";
+      }
+      lineToPrint += " "
+      lineToPrint += childValueString;
+
+      if (subChildren !== null) {
+        for (let i = subChildren.length - 1; i >= 0; i--) {
+          temp.unshift([depth+1, subChildren[i]])
+        }
+      }
+
+      console.log(lineToPrint);
+    }
+
   }
 }
 

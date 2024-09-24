@@ -31,12 +31,13 @@ class XML_DOM {
 // Return a single tag element with data (to sort it later)
 function captureTag(
   dataString: string
-): [{ tagName: string; isClosingTag: boolean; textContent: string }, string] {
+): [{ tagName: string; isClosingTag: boolean; selfClosingTag: boolean; textContent: string }, string] {
   const dataArray = dataString.split("");
   let startTag = false;
   let endTag = false;
   let tagName = "";
   let isClosingTag = false;
+  let selfClosingTag = false;
   let previousChar = "";
   let textContent = "";
 
@@ -47,7 +48,7 @@ function captureTag(
       if (char === "<") {
         startTag = true;
       } else if (char === ">") {
-        if (previousChar === "/") isClosingTag = true;
+        if (previousChar === "/") selfClosingTag = true;
         endTag = true;
       } else if (char === "/") {
         if (previousChar === "<") isClosingTag = true;
@@ -61,23 +62,24 @@ function captureTag(
     }
   }
 
-  return [{ tagName, isClosingTag, textContent }, dataArray.join("")];
+  return [{ tagName, isClosingTag, selfClosingTag, textContent }, dataArray.join("")];
 }
 
 // Return all the tag present in a string representing an XML document.
 function captureAllTags(dataString: string): {
   tagName: string;
   isClosingTag: boolean;
+  selfClosingTag: boolean;
   textContent: string;
   attributeContent: string;
 }[] {
   let tagStack = new Array();
   let dataLeft = dataString;
   let tagName, textContent, attributeContent: string;
-  let isClosingTag: boolean;
+  let isClosingTag, selfClosingTag: boolean;
 
   while (dataLeft.length > 0) {
-    [{ tagName, isClosingTag, textContent }, dataLeft] = captureTag(dataLeft);
+    [{ tagName, isClosingTag, selfClosingTag, textContent }, dataLeft] = captureTag(dataLeft);
     let result = tagName.match(/(^[a-zA-Z|:]*) (.*)/);
     if (result === null) {
       attributeContent = "";
@@ -87,72 +89,169 @@ function captureAllTags(dataString: string): {
       attributeContent = result[2] || "";
     }
     
-    tagStack.push({ tagName, isClosingTag, textContent, attributeContent });
+    tagStack.push({ tagName, isClosingTag, selfClosingTag, textContent, attributeContent });
   }
 
   return tagStack;
 }
 
 
-function convertTagStackToXML_DOM(dataString: string) {
-  interface StackData {
-    name:string;
-    content:string;
-    attributes:string;
-  }
+interface XMLData {
+  name:string;
+  content:string;
+  attributes:string;
+}
+
+function convertTagStackToTree(dataString: string):Tree<XMLData>|null {
   const tagStack = captureAllTags(dataString);
-  let openedTagStack = new Array();
-  let temp = new Tree<StackData>();
-  let parentIndex:number|null=null;
-  // let result:XML_Element|null=null;
+  let firstTag = tagStack.shift();
 
-  while (tagStack.length > 0) {
-    const currentTag = tagStack.shift();
-    
-    if (currentTag) {
+  if (firstTag !== undefined) {
+    let rootTree:Tree<XMLData> = new Tree({name: firstTag.tagName, content: "", attributes: firstTag.attributeContent});
+    let currentTree:Tree<XMLData> = rootTree;
+    let openedTagStack = new Array<string>(firstTag.tagName);
 
-      if (!currentTag.isClosingTag) {
-        openedTagStack.unshift(currentTag);
-      } else if(currentTag.isClosingTag && currentTag.tagName === openedTagStack[0].tagName) {
-        if (parentIndex === null)
-          // If first closed element, store the index of the parent tag element
-          parentIndex = openedTagStack.length - 2;
+    while (tagStack.length > 0) {
+      let currentElement = tagStack.shift();
 
-        if (parentIndex === openedTagStack.length - 1){
-          let {attributeContent} = openedTagStack.shift();
-          temp.setValue({
-            name: currentTag.tagName,
-            content: currentTag.textContent,
-            attributes: attributeContent
+      if (currentElement){
+
+        if (openedTagStack[0] === currentElement.tagName) {
+         
+          let currentValue = currentTree.getValue();
+          let attributes = "";
+          if (currentValue)
+            attributes = currentValue.attributes;
+
+          currentTree.setValue({
+            name: currentElement.tagName,
+            content: currentElement.textContent,
+            attributes: attributes
           })
-          temp = new Tree(null, [temp]);
-          if (openedTagStack.length !== 0)
-            parentIndex = openedTagStack.length - 1;
-        }else {
-          let {attributeContent} = openedTagStack.shift();
-          temp.insertChildLast(new Tree({
-            name: currentTag.tagName,
-            content: currentTag.textContent,
-            attributes: attributeContent
-          }))
+          if (currentTree.parent !== null)
+            currentTree = currentTree.parent;
+          openedTagStack.shift();
+
+        } else if (currentElement.selfClosingTag) {
+          
+          let temp = new Tree({name: currentElement.tagName, content: "", attributes: currentElement.attributeContent});
+          currentTree.insertChildLast(temp);
+        
+        } else {
+        
+          let temp = new Tree({name: currentElement.tagName, content: "", attributes: currentElement.attributeContent});
+          currentTree.insertChildLast(temp);
+          currentTree = temp;
+          openedTagStack.unshift(currentElement.tagName)
+        
         }
       }
     }
+
+    return rootTree;
   }
 
-  return temp;
+  return null
 }
 
-const RSSSample1 = loadFile(resolvePath("../src/data/xml_medium1.xml"));
+function convertDataToXML_DOM(dataString: string):XML_Element|null {
+  function buildAttributesFromString(attributesString:string):[string,string][]|null {
+    if (attributesString === "") return null;
+    const attributesArray = attributesString.split(/ +/);
+    const stringQuoteArray = ["\"", "\'", "\`"]
+    let result:[string,string][]|null = null;
+  
+    for (let currentAttribute of attributesArray) {
+      let [key, value] = currentAttribute.split("=")
+      if (key !== "" && value !== "") {
+        if (stringQuoteArray.includes(value[0]) && stringQuoteArray.includes(value[value.length - 1])) {
+          if (result === null) result = new Array<[string,string]>()
+          result.push([key, value]);
+        } else {
+          console.error(`Invalid attribute value entered with key ${key}, quotes are lacking with the value : ${value}.`);
+        }
+      } else {
+        console.error(`Invalid attribute entered with key/value pair: ${currentAttribute}.`);
+      }
+    }
+
+    return result;
+  }
+  const tagStack = captureAllTags(dataString);
+  let firstTag = tagStack.shift();
+
+  if (firstTag !== undefined) {
+    let rootTree:XML_Element = new XML_Element(firstTag.tagName, buildAttributesFromString(firstTag.attributeContent));
+    let currentTree:XML_Element = rootTree;
+    let openedTagStack = new Array<string>(firstTag.tagName);
+
+    while (tagStack.length > 0) {
+      let currentElement = tagStack.shift();
+
+      if (currentElement){
+
+        if (openedTagStack[0] === currentElement.tagName) {
+          currentTree.text = currentElement.textContent
+          if (currentTree.parent !== null)
+            currentTree = currentTree.parent;
+          openedTagStack.shift();
+
+        } else if (currentElement.selfClosingTag) {
+          
+          let temp = new XML_Element(currentElement.tagName, buildAttributesFromString(currentElement.attributeContent));
+          currentTree.insertChildLast(temp);
+        
+        } else {
+        
+          let temp = new XML_Element(currentElement.tagName, buildAttributesFromString(currentElement.attributeContent));
+          currentTree.insertChildLast(temp);
+          currentTree = temp;
+          openedTagStack.unshift(currentElement.tagName)
+        
+        }
+      }
+    }
+
+    return rootTree;
+  }
+
+  return null
+}
+
+function buildXML_ElementFromXMLData(data:XMLData):XML_Element {
+  const {name, attributes, content} = data;
+  let newElement = new XML_Element(name, null, null, content);
+  const attributesArray = attributes.split(/ +/);
+  const stringQuoteArray = ["\"", "\'", "\`"]
+
+  for (let currentAttribute of attributesArray) {
+    let [key, value] = currentAttribute.split("=")
+    if (key !== "" && value !== "") {
+      if (stringQuoteArray.includes(value[0]) && stringQuoteArray.includes(value[value.length - 1])) {
+        newElement.addAttribute(key, value)
+      } else {
+        console.error(`Invalid attribute value entered with key ${key}, quotes are lacking with the value : ${value}.`);
+      }
+    } else {
+      console.error(`Invalid attribute entered with key/value pair: ${currentAttribute}.`);
+    }
+  }
+
+  return newElement
+}
+
+const RSSSample1 = loadFile(resolvePath("../src/data/rss_sample1.xml"));
 if (RSSSample1 !== undefined) {
-  console.log(RSSSample1, "\n");
+  // console.log(RSSSample1, "\n");
+  // const data = RSSSample1
   const data = RSSSample1.replace(/\r/g, "")
     .replace(/\n/g, "")
     .replace(/\t/g, "")
-    .replace(/> *</g, "><");
+    .replace(/(<!\[CDATA\[)(.*)(\]\]>)/g, "$2")
+    // .replace(/> *</g, "><");
   // console.log(data,"\n");
   // @ts-ignore
   // console.dir(convertTagStackToXML_DOM(data));
-  convertTagStackToXML_DOM(data).display();
+  convertDataToXML_DOM(data).display();
 }
 //     console.log(loadXML(RSSSample1))
