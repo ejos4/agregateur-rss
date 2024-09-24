@@ -171,7 +171,7 @@ class Tree<V> {
       let childValue = child.getValue();
       let lineToPrint = "";
       const subChildren = child.getChildren();
-      let childValueString = (childValue === null) ? "#" : childValue;
+      let childValueString = (childValue === null) ? "#" : JSON.stringify(childValue);
 
       // @ts-ignore
       if (depth !== 1 && temp.filter(([tDepth, _]) => tDepth<2).length)
@@ -199,31 +199,3 @@ class Tree<V> {
 }
 
 export { Tree };
-
-// let tree1 = new Tree(2, [
-//   new Tree(1),
-//   new Tree(3)
-// ])
-
-// let tree2 = new Tree<string|number>('7', [
-//   new Tree(2, [
-//     new Tree(null, [
-//       new Tree(3),
-//       new Tree<string|number>("A", [
-//         new Tree(0, [
-//           new Tree(9)
-//         ])
-//       ])
-//     ]),
-//     new Tree(6, [
-//       new Tree(4, [new Tree(5)]),
-//     ])
-//   ]),
-//   new Tree(10, [new Tree(9)])
-// ])
-
-// console.log(tree2.getMaxDepth())
-// console.log("\nDisplaying tree 1:");
-// tree1.display()
-// console.log("\nDisplaying tree 2:");
-// tree2.display()

@@ -1,5 +1,6 @@
 import { XML_Element } from "./XML_Element";
 import { loadFile, resolvePath } from "../utilities";
+import { Tree } from "./Tree/Tree";
 
 interface Dictionnary {
   [key: string]: string;
@@ -65,7 +66,7 @@ function captureTag(
 
 // Return all the tag present in a string representing an XML document.
 function captureAllTags(dataString: string): {
-  tagContent: string;
+  tagName: string;
   isClosingTag: boolean;
   textContent: string;
   attributeContent: string;
@@ -83,29 +84,66 @@ function captureAllTags(dataString: string): {
     } else {
       // Seperate the attributes value from the tag name
       tagName = result[1] || tagName;
-      attributeContent = result[2] || "s";
+      attributeContent = result[2] || "";
     }
+    
     tagStack.push({ tagName, isClosingTag, textContent, attributeContent });
   }
 
   return tagStack;
 }
 
+
 function convertTagStackToXML_DOM(dataString: string) {
+  interface StackData {
+    name:string;
+    content:string;
+    attributes:string;
+  }
   const tagStack = captureAllTags(dataString);
   let openedTagStack = new Array();
+  let temp = new Tree<StackData>();
+  let parentIndex:number|null=null;
+  // let result:XML_Element|null=null;
 
   while (tagStack.length > 0) {
     const currentTag = tagStack.shift();
-
+    
     if (currentTag) {
-      if (currentTag.isClosingTag && openedTagStack[0] && openedTagStack[0]) {
+
+      if (!currentTag.isClosingTag) {
+        openedTagStack.unshift(currentTag);
+      } else if(currentTag.isClosingTag && currentTag.tagName === openedTagStack[0].tagName) {
+        if (parentIndex === null)
+          // If first closed element, store the index of the parent tag element
+          parentIndex = openedTagStack.length - 2;
+
+        if (parentIndex === openedTagStack.length - 1){
+          let {attributeContent} = openedTagStack.shift();
+          temp.setValue({
+            name: currentTag.tagName,
+            content: currentTag.textContent,
+            attributes: attributeContent
+          })
+          temp = new Tree(null, [temp]);
+          if (openedTagStack.length !== 0)
+            parentIndex = openedTagStack.length - 1;
+        }else {
+          let {attributeContent} = openedTagStack.shift();
+          temp.insertChildLast(new Tree({
+            name: currentTag.tagName,
+            content: currentTag.textContent,
+            attributes: attributeContent
+          }))
+        }
       }
     }
   }
+
+  return temp;
 }
 
-const RSSSample1 = loadFile(resolvePath("./data/xml_medium1.xml"));
+const RSSSample1 = loadFile(resolvePath("../src/data/xml_medium1.xml"));
 if (RSSSample1 !== undefined) {
   console.log(RSSSample1, "\n");
   const data = RSSSample1.replace(/\r/g, "")
@@ -113,6 +151,8 @@ if (RSSSample1 !== undefined) {
     .replace(/\t/g, "")
     .replace(/> *</g, "><");
   // console.log(data,"\n");
-  console.log(captureAllTags(data));
+  // @ts-ignore
+  // console.dir(convertTagStackToXML_DOM(data));
+  convertTagStackToXML_DOM(data).display();
 }
 //     console.log(loadXML(RSSSample1))
