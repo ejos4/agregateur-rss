@@ -1,7 +1,6 @@
 import { XML_Element } from "./XML_Element";
 import { loadFile, resolvePath } from "../../utilities";
 import convertDataToXML_DOM from "./convertDataToXML_DOM";
-import { decode } from "punycode";
 
 interface Dictionnary {
   [key: string]: string;
@@ -16,7 +15,43 @@ class XML_DOM {
   }
 
   // @ts-ignore
-  private #buildId() {}
+  private #buildId() {
+    const seenStack = new Array<XML_Element>();
+    const stack = new Array<XML_Element>();
+    let maxId = 0;
+    let current = this.root;
+
+    if (current !== null) {
+      stack.unshift(current);
+      seenStack.unshift(current);
+      const children = current.getChildren();
+
+      if (children !== null && children.length !== 0) stack.unshift(...children);
+
+      while (stack.length > 0) {
+        // @ts-ignore Stack is never empty here
+        current = stack.shift()
+        if (current !== null) {
+          const currentChildren = current.getChildren();
+  
+          if (currentChildren !== null && currentChildren.length > 0) {
+            if (seenStack[0] === current) {
+              seenStack.shift();
+              current.setId(++maxId);
+            } else {
+              stack.unshift(current);
+              seenStack.unshift(current);
+              stack.unshift(...currentChildren);
+            }
+            
+          } else {
+            current.setId(++maxId);
+          }
+
+        }
+      }
+    }
+  }
 
   get(name: string): XML_Element[] {
     if (this.root !== null)
@@ -40,7 +75,10 @@ class XML_DOM {
       .replace(/(<!\[CDATA\[)(.*)(\]\]>)/g, "$2")
       .replace(/<!--.*-->/g, "");
 
-    return convertDataToXML_DOM(data);
+    const xmlDOM = convertDataToXML_DOM(data);
+    if (xmlDOM !== null) xmlDOM.#buildId();
+
+    return xmlDOM;
   }
 }
 

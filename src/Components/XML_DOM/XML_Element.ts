@@ -49,12 +49,8 @@ class XML_Element extends Tree<string> {
   }
 
   getValueString(): string {
+    // return `<${this.name}-${this.#id}>`
     return `<${this.prefix?`${this.prefix}:`:""}${this.name} ${JSON.stringify(this.#attributes)} ${this.text.length===0?"/>":`>${this.text}</${this.prefix?`${this.prefix}:`:""}${this.name}>`}`
-    return JSON.stringify({
-      tag: `${this.prefix?`${this.prefix}:`:""}${this.name}`,
-      attributes: this.#attributes,
-      content: this.text
-    })
   }
 
   isEmpty(): boolean {
@@ -165,6 +161,7 @@ class XML_Element extends Tree<string> {
 
   // -------------- Get children --------------
 
+  // Get elements with the same name
   get(name: string): XML_Element[] {
     let currentStack = [...(this.getChildren() as XML_Element[])];
     let resultArray = new Array<XML_Element>();
@@ -184,6 +181,9 @@ class XML_Element extends Tree<string> {
 
     return resultArray;
   }
+
+  // Get all the children
+  getChildren(): XML_Element[] | null { return (super.getChildren() as XML_Element[] | null); }
 
   // -------------- Insert element --------------
 
