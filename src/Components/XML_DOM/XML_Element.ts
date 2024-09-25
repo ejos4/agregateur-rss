@@ -1,4 +1,4 @@
-import { Tree } from "./Tree/Tree";
+import { Tree } from "../Tree/Tree";
 
 interface Dictionnary {
   [key: string]: string;
@@ -161,6 +161,28 @@ class XML_Element extends Tree<string> {
 
   getId(): number {
     return this.#id;
+  }
+
+  // -------------- Get children --------------
+
+  get(name: string): XML_Element[] {
+    let currentStack = [...(this.getChildren() as XML_Element[])];
+    let resultArray = new Array<XML_Element>();
+
+    while (currentStack.length !== 0) {
+      const currentElement = currentStack.shift();
+
+      if (currentElement !== null && currentElement !== undefined) {
+        const children = currentElement.getChildren() as XML_Element[] | null;
+        if (children !== null)
+          currentStack.unshift(...children);
+
+        if (currentElement.getValue() === name)
+          resultArray.push(currentElement);
+      }
+    }
+
+    return resultArray;
   }
 
   // -------------- Insert element --------------
