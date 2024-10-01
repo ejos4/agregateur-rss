@@ -1,5 +1,4 @@
 import { XML_Element } from "./XML_Element";
-import { loadFile, resolvePath } from "../../utilities";
 import convertDataToXML_DOM from "./convertDataToXML_DOM";
 
 interface Dictionnary {
@@ -69,28 +68,16 @@ class XML_DOM {
 
   static load(rawData: string): XML_DOM | null {
     const data = rawData
+      .replace(/<!--.*-->/g, "")
+      .replace(/(<!\[CDATA\[)(.*)(\]\]>)/g, "$2")
       .replace(/\r/g, "")
       .replace(/\n/g, "")
       .replace(/\t/g, "")
-      .replace(/(<!\[CDATA\[)(.*)(\]\]>)/g, "$2")
-      .replace(/<!--.*-->/g, "");
 
     const xmlDOM = convertDataToXML_DOM(data);
     if (xmlDOM !== null) xmlDOM.#buildId();
 
     return xmlDOM;
-  }
-}
-
-const RSSSample1 = loadFile(resolvePath("../src/data/endTest.rss"));
-if (RSSSample1 !== undefined) {
-  console.log("File loaded");
-  const xmlDOM = XML_DOM.load(RSSSample1);
-  if (xmlDOM !== null) {
-    // xmlDOM.root?.display();
-    console.log(xmlDOM.prologue);
-    console.log(xmlDOM.get("item").length, "\n");
-    console.log(xmlDOM.get("item")[0].get("title")[0].text);
   }
 }
 

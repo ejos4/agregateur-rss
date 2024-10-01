@@ -16,5 +16,21 @@
         </m:Customer>
 
     </Order>
+    
+    <Order>
+
+        <OrderNo> 1  </OrderNo>
+
+        <m:Customer>
+
+            <m:CustomerNo>99</m:CustomerNo>
+
+            <m:CustomerName>Fred</m:CustomerName>
+
+            <m:CustomerDate date="2024-10-12"/>
+
+        </m:Customer>
+
+    </Order>
 
 </Orders>

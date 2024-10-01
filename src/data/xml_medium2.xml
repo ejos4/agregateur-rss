@@ -9,18 +9,19 @@
     <Order>
 
         <OrderNo> 1  </OrderNo>
+<!-- ##########commentttt############### -->
+        <m:Customer> <!-- ##########commentttt############### -->
 
-        <m:Customer>
-
-            <m:CustomerNo>99</m:CustomerNo>
+            <m:CustomerNo>99<!-- ##########commentttt############### --></m:CustomerNo>
 
             <m:CustomerName>Fred</m:CustomerName>
-
+            <!-- ##########commentttt############### -->
             <m:CustomerDate date="2024-10-12"/>
 
         </m:Customer>
 
+        <!-- ##########commentttt#######dede ######## -->
         <enclosure length="243" type="image/png" url="https://www.sample.com/pictures/a-picture.png"/>
     </Order>
-
+    <!-- ##########commentttt############### -->
 </Orders>

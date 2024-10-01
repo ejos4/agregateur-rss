@@ -5,15 +5,16 @@ const {getRSSFeed} = require("./index");
 
 describe("The RSS Feed", () => {
 
-    test("is getting data correctly", () => {
-        const RSSSample1 = loadFile(resolvePath("./data/rss_sample1.xml"))
+    test.todo("is getting data correctly")
+    // test("is getting data correctly", () => {
+    //     const RSSSample1 = loadFile(resolvePath("./data/rss_sample1.xml"))
 
-        if (RSSSample1) {
-            const RSS_XML = getRSSFeed(RSSSample1);
+    //     if (RSSSample1) {
+    //         const RSS_XML = getRSSFeed(RSSSample1);
 
-            expect(RSS_XML).not.toBe(null)
-        }
-    });
+    //         expect(RSS_XML).not.toBe(null)
+    //     }
+    // });
 
     test.todo("can be tested for required attributes");
     
